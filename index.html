@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VALORANT マップルーレット </title>
+  <meta name="description" content="VALORANTのマップをランダムに決めるマップルーレット。カスタムマッチのマップ決めに。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Oswald:wght@500;600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body data-mode="single">
+  <div class="bg-grid" aria-hidden="true"></div>
+  <div class="bg-glow" aria-hidden="true"></div>
+  <canvas id="confetti" aria-hidden="true"></canvas>
+
+  <header class="site-header">
+    <div class="brand">
+      <h1 class="brand-title" style="white-space: nowrap;">VALORANT MAP ROULETTE</h1>
+    </div>
+    <nav class="mode-tabs" aria-label="モード切替">
+      <a class="mode-tab current" href="index.html" aria-current="page">通常</a>
+      <a class="mode-tab" href="bo3.html">BO3</a>
+    </nav>
+    <p class="status" id="status-text" role="status">マップ情報を読み込み中…</p>
+  </header>
+
+  <main class="layout">
+
+    <section class="roulette" aria-labelledby="roulette-heading">
+      <h2 id="roulette-heading" class="sr-only">マップルーレット</h2>
+
+      <div class="reel-frame" id="reel-frame">
+        <div class="reel-viewport" id="reel-viewport">
+          <div class="reel-track" id="reel-track"></div>
+        </div>
+        <div class="reel-pointer" aria-hidden="true"></div>
+        <div class="reel-fade reel-fade-left" aria-hidden="true"></div>
+        <div class="reel-fade reel-fade-right" aria-hidden="true"></div>
+      </div>
+
+      <div class="controls-container">
+        <div class="controls">
+          <button id="spin-btn" class="spin-btn" type="button" disabled>
+            <span class="spin-btn-label">SPIN</span>
+          </button>
+        </div>
+        <div class="quick-history">
+          <ol class="history-list" id="quick-history-list"></ol>
+          <div id="history-controls" class="history-controls">
+            <button type="button" class="chip-btn small" id="history-modal-open">履歴を詳しく見る</button>
+            <button type="button" class="chip-btn small" id="history-clear">履歴を消す</button>
+          </div>
+        </div>
+      </div>
+
+      <p id="spin-error" class="spin-error" hidden>2つ以上のマップを選択してください</p>
+
+      <article class="result" id="result" aria-live="polite" hidden>
+        <div class="result-bg" id="result-bg"></div>
+        <div class="result-body">
+          <p class="result-label">DECIDED MAP</p>
+          <h3 class="result-name-ja" id="result-name-ja"></h3>
+          <p class="result-name-en" id="result-name-en"></p>
+        </div>
+      </article>
+    </section>
+
+    <aside class="panel" aria-labelledby="pool-heading">
+      <div class="panel-head">
+        <div class="panel-head-top">
+          <h2 id="pool-heading">マッププール</h2>
+          <div class="preset-row">
+            <button type="button" class="chip-btn small" id="preset-all">全選択</button>
+            <button type="button" class="chip-btn small" id="preset-none">全解除</button>
+          </div>
+        </div>
+        <span class="count-badge" id="pool-count">0 / 0</span>
+      </div>
+
+      <div class="options-row">
+        <label class="switch">
+          <input type="checkbox" id="opt-autoexclude" checked />
+          <span class="switch-ui" aria-hidden="true"></span>
+          <span class="switch-text">選ばれたマップを自動で外す</span>
+        </label>
+        <label class="select-row">
+          <span>回転時間</span>
+          <select id="opt-duration">
+            <option value="3500">短い</option>
+            <option value="5500" selected>ふつう</option>
+            <option value="8000">長い</option>
+          </select>
+        </label>
+      </div>
+
+      <ul class="pool-grid" id="pool-grid"></ul>
+
+
+    </aside>
+
+
+    <section class="panel history" id="history-modal" hidden style="grid-area: history;">
+      <div class="panel-head">
+        <h2>履歴</h2>
+        <button type="button" class="chip-btn small" id="history-modal-close">閉じる</button>
+      </div>
+      <ol class="history-list full" id="history-list"></ol>
+      <p class="empty" id="history-empty">まだ結果がありません</p>
+    </section>
+  </main>
+
+  <div id="confirm-modal" class="modal-overlay" hidden>
+    <div class="modal-content">
+      <p id="confirm-msg"></p>
+      <div class="modal-actions">
+        <button id="btn-confirm-cancel" class="btn"
+          style="background: var(--surface-2); border: 1px solid var(--line); color: #fff;">キャンセル</button>
+        <button id="btn-confirm-ok" class="btn primary">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <p>本サイトは、Riot Gamesの「Legal Jibber Jabber」ポリシーに基づき、
+          VALORANT APIを使用して作成しています。このツールは<a href="https://x.com/ggraciejp" target="_blank" rel="noopener"
+        style="color: #4bd5ff;">grajp</a>が作成しています。</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+
+</html>

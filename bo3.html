@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VALORANT BO3 BAN/PICK</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Oswald:wght@500;600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body data-mode="bo3">
+  <div class="bg-grid" aria-hidden="true"></div>
+  <div class="bg-glow" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <div class="brand">
+      <h1 class="brand-title" style="white-space: nowrap;">VALORANT BO3 BAN/PICK</h1>
+    </div>
+    <nav class="mode-tabs" aria-label="モード切替">
+      <a class="mode-tab" href="index.html">通常</a>
+      <a class="mode-tab current" href="bo3.html" aria-current="page">BO3</a>
+    </nav>
+  </header>
+
+  <main class="layout veto-layout">
+    <section class="panel veto-panel">
+
+      <div class="veto-setup" id="veto-setup">
+        <h2>BAN / PICK 設定</h2>
+
+        <div id="team-setup-phase" style="margin-bottom: 24px;">
+          <p style="margin-bottom: 8px; font-weight: 700; font-size: 14px; color: var(--muted);">1. チーム名を決める</p>
+          <div class="team-inputs">
+            <input type="text" id="team1-name" placeholder="クリックして名前を書く">
+            <input type="text" id="team2-name" placeholder="クリックして名前を書く">
+          </div>
+          <p style="margin-top: 16px; margin-bottom: 8px; font-weight: 700; font-size: 14px; color: var(--muted);">2.
+            先攻・後攻を決める</p>
+          <div style="display: flex; flex-direction: column; gap: 16px; align-items: center;">
+            <div class="first-pick-options" id="first-pick-options"
+              style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
+              <button class="chip-btn fp-btn active" data-val="random"
+                style="background: rgba(255, 70, 85, 0.18); border-color: var(--accent); color: #fff;">ランダムで決める</button>
+              <button class="chip-btn fp-btn" data-val="1">Team A が先攻</button>
+              <button class="chip-btn fp-btn" data-val="2">Team B が先攻</button>
+            </div>
+            <button id="btn-start-veto" class="btn primary" disabled>BAN/PICKを開始する</button>
+          </div>
+        </div>
+
+        <div id="map-selection-phase">
+          <p style="margin-bottom: 12px; font-weight: 700;">マップを7つ選んでください　(<span id="setup-map-count"
+              style="color: var(--accent);">0</span>/7)</p>
+          <ul class="setup-pool-grid" id="selected-7-grid"></ul>
+        </div>
+        <p id="veto-error" class="status error"></p>
+      </div>
+
+      <div class="veto-active" id="veto-active" hidden>
+        <div class="veto-controls" style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+          <button id="btn-veto-undo" class="chip-btn" style="padding: 10px 18px; font-size: 14px;">1つ前に戻す</button>
+          <div style="display: flex; gap: 8px;">
+            <button id="btn-veto-copy" class="chip-btn"
+              style="padding: 10px 18px; font-size: 14px; color: #4bd5ff; border-color: rgba(75, 213, 255, 0.3); display: none;">結果をコピーする</button>
+            <button id="btn-veto-reset" class="chip-btn"
+              style="padding: 10px 18px; font-size: 14px; color: #ff4655; border-color: rgba(255, 70, 85, 0.3);">最初からやり直す</button>
+          </div>
+        </div>
+        <div class="veto-header" style="text-align: center; margin-bottom: 24px;">
+          <h2 id="veto-turn-text"
+            style="font-size: 32px; font-weight: 900; text-shadow: 0 0 10px rgba(255,255,255,0.2);">Team A's Turn: BAN a
+            map</h2>
+          <p id="veto-instruction-text" style="color: #fff; margin-top: 10px; font-weight: 900; font-size: 20px;"></p>
+        </div>
+
+        <div id="veto-action-wrapper"
+          style="display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.8s cubic-bezier(0.4, 0, 0.2, 1), margin-bottom 0.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1); margin-bottom: 32px; opacity: 1;">
+          <div style="overflow: hidden;">
+            <div id="veto-action-area" class="veto-action-area"
+              style="min-height: 140px; display: grid; grid-template-areas: 'overlap'; align-items: center; justify-items: center;">
+              <div class="veto-pool" id="veto-pool" style="grid-area: overlap; width: 100%;"></div>
+
+              <div class="side-select" id="side-select" hidden
+                style="grid-area: overlap; margin: 0 auto; width: 100%; max-width: 600px; transform: translateY(-45px);">
+                <h3 id="side-select-text" style="display: none;">Team B: Select Side</h3>
+                <div class="side-btns">
+                  <button class="btn atk" id="btn-atk" data-side="ATTACK" style="padding: 12px 24px;">アタッカー</button>
+                  <button class="btn def" id="btn-def" data-side="DEFENSE" style="padding: 12px 24px;">ディフェンダー</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="veto-slots" id="veto-slots"></div>
+      </div>
+
+      </div>
+
+    </section>
+
+    <section class="panel pool-panel" id="pool-panel">
+      <div class="panel-head">
+        <h2 class="panel-title">マップ選択</h2>
+      </div>
+      <ul class="pool-grid" id="pool-grid"></ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>本サイトは、Riot Gamesの「Legal Jibber Jabber」ポリシーに基づき、
+          VALORANT APIを使用して作成しています。このツールは<a href="https://x.com/ggraciejp" target="_blank" rel="noopener"
+        style="color: #4bd5ff;">grajp</a>が作成しています。</p>
+  </footer>
+
+  <div id="confirm-modal" class="modal-overlay" hidden>
+    <div class="modal-content">
+      <p id="confirm-msg">マップ選択からやり直しますか？</p>
+      <div class="modal-actions">
+        <button id="btn-confirm-cancel" class="btn"
+          style="background: var(--surface-2); border: 1px solid var(--line); color: #fff;">キャンセル</button>
+        <button id="btn-confirm-ok" class="btn primary">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="veto.js"></script>
+</body>
+
+</html>
