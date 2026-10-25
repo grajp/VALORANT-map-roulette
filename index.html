@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VALORANT マップルーレット </title>
+  <title>VALORANT マップルーレット</title>
   <meta name="description" content="VALORANTのマップをランダムに決めるマップルーレット。カスタムマッチのマップ決めに。" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -17,11 +17,10 @@
 <body data-mode="single">
   <div class="bg-grid" aria-hidden="true"></div>
   <div class="bg-glow" aria-hidden="true"></div>
-  <canvas id="confetti" aria-hidden="true"></canvas>
 
   <header class="site-header">
     <div class="brand">
-      <h1 class="brand-title" style="white-space: nowrap;">VALORANT MAP ROULETTE</h1>
+      <h1 class="brand-title">VALORANT MAP ROULETTE</h1>
     </div>
     <nav class="mode-tabs" aria-label="モード切替">
       <a class="mode-tab current" href="index.html" aria-current="page">通常</a>
@@ -31,7 +30,7 @@
   </header>
 
   <main class="layout">
-
+    <!-- ルーレット本体 -->
     <section class="roulette" aria-labelledby="roulette-heading">
       <h2 id="roulette-heading" class="sr-only">マップルーレット</h2>
 
@@ -71,7 +70,8 @@
       </article>
     </section>
 
-    <aside class="panel" aria-labelledby="pool-heading">
+    <!-- マッププール設定 -->
+    <aside class="panel pool-panel" aria-labelledby="pool-heading">
       <div class="panel-head">
         <div class="panel-head-top">
           <h2 id="pool-heading">マッププール</h2>
@@ -100,12 +100,10 @@
       </div>
 
       <ul class="pool-grid" id="pool-grid"></ul>
-
-
     </aside>
 
-
-    <section class="panel history" id="history-modal" hidden style="grid-area: history;">
+    <!-- 履歴一覧パネル -->
+    <section class="panel history" id="history-modal" hidden>
       <div class="panel-head">
         <h2>履歴</h2>
         <button type="button" class="chip-btn small" id="history-modal-close">閉じる</button>
@@ -115,21 +113,22 @@
     </section>
   </main>
 
+  <!-- 確認モーダル -->
   <div id="confirm-modal" class="modal-overlay" hidden>
     <div class="modal-content">
       <p id="confirm-msg"></p>
       <div class="modal-actions">
-        <button id="btn-confirm-cancel" class="btn"
-          style="background: var(--surface-2); border: 1px solid var(--line); color: #fff;">キャンセル</button>
-        <button id="btn-confirm-ok" class="btn primary">OK</button>
+        <button id="btn-confirm-cancel" class="btn secondary" type="button">キャンセル</button>
+        <button id="btn-confirm-ok" class="btn primary" type="button">OK</button>
       </div>
     </div>
   </div>
 
   <footer class="site-footer">
-    <p>本サイトは、Riot Gamesの「Legal Jibber Jabber」ポリシーに基づき、
-          VALORANT APIを使用して作成しています。このツールは<a href="https://x.com/ggraciejp" target="_blank" rel="noopener"
-        style="color: #4bd5ff;">grajp</a>が作成しています。</p>
+    <p>
+      本サイトは、Riot Gamesの「Legal Jibber Jabber」ポリシーに基づき、VALORANT APIを使用して作成しています。このツールは<a
+        href="https://x.com/ggraciejp" target="_blank" rel="noopener">grajp</a>が作成しています。
+    </p>
   </footer>
 
   <script src="app.js"></script>
