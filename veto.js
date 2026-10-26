@@ -2,6 +2,7 @@
   "use strict";
 
   const API_URL = "https://valorant-api.com/v1/maps?language=";
+  const MAPS_CACHE_KEY = "valorant-map-roulette:maps-cache:v1";
   const REQUIRED_MAP_COUNT = 7;
 
   const FALLBACK_MAPS = [
@@ -17,7 +18,7 @@
     ["Pearl", "パール"],
     ["Split", "スプリット"],
     ["Sunset", "サンセット"],
-  ].map(([en, ja]) => ({ id: en, en, ja, tall: null, splash: null }));
+  ].map(([en, ja]) => ({ id: en, en, ja, tall: null, icon: null, splash: null }));
 
   // BO3 BAN/PICK の進行フェーズ定義
   const PHASES = [
@@ -74,6 +75,27 @@
     btnConfirmCancel: $("btn-confirm-cancel"),
   };
 
+  // localStorage からキャッシュ済みマップ一覧を取得
+  function loadCachedMaps() {
+    try {
+      const raw = localStorage.getItem(MAPS_CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) && parsed.length >= REQUIRED_MAP_COUNT ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+
+  // マップ一覧を localStorage にキャッシュ保存
+  function saveCachedMaps(maps) {
+    try {
+      localStorage.setItem(MAPS_CACHE_KEY, JSON.stringify(maps));
+    } catch {
+      // プライベートブラウジング等で保存できない場合は無視
+    }
+  }
+
   // VALORANT APIからマップ一覧を取得（日本語・英語名を結合）
   async function fetchMaps() {
     const [ja, en] = await Promise.all(
@@ -93,6 +115,7 @@
         ja: m.displayName,
         en: (enMap.get(m.uuid) || m).displayName,
         tall: m.listViewIconTall,
+        icon: m.listViewIcon,
         splash: m.splash,
       }))
       .sort((a, b) => a.ja.localeCompare(b.ja, "ja"));
@@ -471,13 +494,6 @@
   }
 
   async function init() {
-    try {
-      state.maps = await fetchMaps();
-    } catch (err) {
-      console.warn("マップ取得に失敗したためフォールバックを使用:", err);
-      state.maps = FALLBACK_MAPS;
-    }
-
     el.team1.addEventListener("input", updateTeamNames);
     el.team2.addEventListener("input", updateTeamNames);
     updateTeamNames();
@@ -489,14 +505,46 @@
       });
     });
 
-    renderSetupPool();
-
     el.btnStart.addEventListener("click", startVeto);
     el.btnAtk.addEventListener("click", () => selectSide("ATTACK"));
     el.btnDef.addEventListener("click", () => selectSide("DEFENSE"));
     el.btnUndo.addEventListener("click", undoVeto);
     el.btnReset.addEventListener("click", resetVeto);
     if (el.btnCopy) el.btnCopy.addEventListener("click", copyVetoResults);
+
+    // キャッシュがあれば API 通信を待たずに即座に描画
+    const cached = loadCachedMaps();
+    if (cached) {
+      state.maps = cached;
+      renderSetupPool();
+
+      // バックグラウンドで最新データを取得してキャッシュを更新
+      fetchMaps()
+        .then((fresh) => {
+          if (fresh.length < REQUIRED_MAP_COUNT) return;
+          saveCachedMaps(fresh);
+          const isSameIds =
+            fresh.length === state.maps.length &&
+            fresh.every((m, idx) => m.id === state.maps[idx].id);
+          state.maps = fresh;
+          if (!isSameIds && state.vetoPhase === 0 && state.enabled.size === 0) {
+            renderSetupPool();
+          }
+        })
+        .catch(() => {});
+      return;
+    }
+
+    // 初回アクセス時（キャッシュなし）は API から取得して保存
+    try {
+      state.maps = await fetchMaps();
+      saveCachedMaps(state.maps);
+    } catch (err) {
+      console.warn("マップ取得に失敗したためフォールバックを使用:", err);
+      state.maps = FALLBACK_MAPS;
+    }
+
+    renderSetupPool();
   }
 
   init();

@@ -2,6 +2,7 @@
   "use strict";
 
   const API_URL = "https://valorant-api.com/v1/maps?language=";
+  const MAPS_CACHE_KEY = "valorant-map-roulette:maps-cache:v1";
   const MIN_MAPS_REQUIRED = 2;
   const START_INDEX = 4;      // 開始時に中央に表示するカードの位置
   const CARDS_PER_SEC = 3.5;  // 回転時間に対する移動カード数
@@ -21,7 +22,7 @@
     ["Pearl", "パール"],
     ["Split", "スプリット"],
     ["Sunset", "サンセット"],
-  ].map(([en, ja]) => ({ id: en, en, ja, tall: null, splash: null }));
+  ].map(([en, ja]) => ({ id: en, en, ja, tall: null, icon: null, splash: null }));
 
   const state = {
     maps: [],
@@ -80,6 +81,27 @@
   const activePool = () => state.maps.filter((m) => state.enabled.has(m.id));
   const pickWinner = (pool) => pool[randInt(pool.length)];
 
+  // localStorage からキャッシュ済みマップ一覧を取得
+  function loadCachedMaps() {
+    try {
+      const raw = localStorage.getItem(MAPS_CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) && parsed.length >= MIN_MAPS_REQUIRED ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+
+  // マップ一覧を localStorage にキャッシュ保存
+  function saveCachedMaps(maps) {
+    try {
+      localStorage.setItem(MAPS_CACHE_KEY, JSON.stringify(maps));
+    } catch {
+      // プライベートブラウジング等で保存できない場合は無視
+    }
+  }
+
   // VALORANT APIからマップ一覧を取得（日本語・英語名を結合）
   async function fetchMaps() {
     const [ja, en] = await Promise.all(
@@ -99,12 +121,13 @@
         ja: m.displayName,
         en: (enMap.get(m.uuid) || m).displayName,
         tall: m.listViewIconTall,
+        icon: m.listViewIcon,
         splash: m.splash,
       }))
       .sort((a, b) => a.ja.localeCompare(b.ja, "ja"));
   }
 
-  // マップ画像のプリロード
+  // 初期表示に必要な縦長カード画像（tall）のみを優先プリロード
   function preloadImages(maps) {
     const decode = (url) => {
       const img = new Image();
@@ -112,9 +135,8 @@
       return img.decode ? img.decode().catch(() => {}) : Promise.resolve();
     };
     const talls = [...new Set(maps.map((m) => m.tall).filter(Boolean))];
-    [...new Set(maps.map((m) => m.splash).filter(Boolean))].forEach(decode);
     const all = Promise.all(talls.map(decode));
-    return Promise.race([all, new Promise((resolve) => setTimeout(resolve, 4000))]);
+    return Promise.race([all, new Promise((resolve) => setTimeout(resolve, 1500))]);
   }
 
   // リールトラックの寸法計算
@@ -192,6 +214,16 @@
 
     const winner = pickWinner(pool);
     const current = state.seq[state.centerIndex] || pool[0];
+
+    // 回転アニメーション中に当選マップの結果背景(splash)と履歴用小アイコン(icon)を先読み
+    if (winner.splash) {
+      const img = new Image();
+      img.src = winner.splash;
+    }
+    if (winner.icon) {
+      const iconImg = new Image();
+      iconImg.src = winner.icon;
+    }
 
     const duration = reducedMotion() ? 600 : state.opts.duration;
     let travel = Math.max(10, Math.round((duration / 1000) * CARDS_PER_SEC));
@@ -287,6 +319,7 @@
       ja: winner.ja,
       en: winner.en,
       tall: winner.tall,
+      icon: winner.icon,
       splash: winner.splash,
       at: Date.now(),
     });
@@ -415,9 +448,10 @@
       const isOn = state.enabled.has(h.id);
       const btnClass = isOn ? "toggle-btn" : "toggle-btn is-ban";
       const num = String(i + 1).padStart(2, "0");
+      const thumb = h.icon || h.splash;
 
       li.innerHTML = `<span class="idx">${num}</span>
-        <span class="h-thumb" ${h.splash ? `style="background-image:url('${h.splash}')"` : ""}></span>
+        <span class="h-thumb" ${thumb ? `style="background-image:url('${thumb}')"` : ""}></span>
         <span class="h-name">${h.ja}</span>
         <button type="button" class="chip-btn small ${btnClass}">${isOn ? "BANする" : "復活"}</button>`;
       li.querySelector("button").addEventListener("click", () => toggleMap(h.id));
@@ -432,9 +466,10 @@
       const li = document.createElement("li");
       li.className = "history-item mini";
       const num = String(fullLen - i).padStart(2, "0");
+      const thumb = h.icon || h.splash;
 
       li.innerHTML = `<span class="idx">${num}</span>
-        <span class="h-thumb" ${h.splash ? `style="background-image:url('${h.splash}')"` : ""}></span>
+        <span class="h-thumb" ${thumb ? `style="background-image:url('${thumb}')"` : ""}></span>
         <span class="h-name">${h.ja}</span>`;
       el.quickHistoryList.appendChild(li);
     });
@@ -507,6 +542,14 @@
     });
   }
 
+  function setupView() {
+    applyPreset("all");
+    state.preload = preloadImages(state.maps);
+    renderPool();
+    renderIdle();
+    updatePoolMeta();
+  }
+
   async function init() {
     bindEvents();
 
@@ -514,9 +557,35 @@
     el.optDuration.value = String(state.opts.duration);
     renderHistory();
 
+    // キャッシュがあれば API 通信を待たずに即座に描画
+    const cached = loadCachedMaps();
+    if (cached) {
+      state.maps = cached;
+      setStatus("");
+      setupView();
+
+      // バックグラウンドで最新データを取得してキャッシュを更新
+      fetchMaps()
+        .then((fresh) => {
+          if (fresh.length < MIN_MAPS_REQUIRED) return;
+          saveCachedMaps(fresh);
+          const isSameIds =
+            fresh.length === state.maps.length &&
+            fresh.every((m, idx) => m.id === state.maps[idx].id);
+          state.maps = fresh;
+          if (!isSameIds && !state.spinning) {
+            setupView();
+          }
+        })
+        .catch(() => {});
+      return;
+    }
+
+    // 初回アクセス時（キャッシュなし）は API から取得して保存
     try {
       state.maps = await fetchMaps();
       if (state.maps.length < MIN_MAPS_REQUIRED) throw new Error("マップが取得できません");
+      saveCachedMaps(state.maps);
       setStatus("");
     } catch (err) {
       console.warn("マップ取得に失敗したためフォールバックを使用:", err);
@@ -524,12 +593,7 @@
       setStatus("オフライン用データを使用中（画像なし）", true);
     }
 
-    applyPreset("all");
-    state.preload = preloadImages(state.maps);
-
-    renderPool();
-    renderIdle();
-    updatePoolMeta();
+    setupView();
   }
 
   init();
